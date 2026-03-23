@@ -72,6 +72,15 @@ Thumbs.db
 # Project specific
 uploads/*
 !uploads/.gitkeep
+backend/uploads/*
 *.sqlite
 *.db
 .next/
+
+# Exports
+*.zip
+*.rar
+*.tar.gz
+
+# Claude Code
+.claude/
