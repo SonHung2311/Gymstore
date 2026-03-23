@@ -209,7 +209,9 @@ export default function AdminChat() {
                 {messages.map((msg) => {
                   const isMe = msg.sender_id === user.id;
                   const apiBase = (import.meta.env.VITE_API_URL as string | undefined) ?? "";
-                  const mediaUrl = msg.media_url ? `${apiBase}${msg.media_url}` : null;
+                  const mediaUrl = msg.media_url
+                    ? msg.media_url.startsWith("http") ? msg.media_url : `${apiBase}${msg.media_url}`
+                    : null;
                   return (
                     <div key={msg.id} className={`flex gap-2 ${isMe ? "flex-row-reverse" : "flex-row"}`}>
                       {!isMe && <UserAvatar user={msg.sender} size={8} />}

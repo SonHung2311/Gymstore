@@ -1,16 +1,23 @@
-import uuid
-from pathlib import Path
+import asyncio
+import io
 
+import cloudinary
+import cloudinary.uploader
 from fastapi import APIRouter, Depends, HTTPException, UploadFile
 from fastapi.responses import JSONResponse
 
+from app.config import settings
 from app.dependencies import get_current_user
 from app.models.user import User
 
 router = APIRouter(prefix="/api/upload", tags=["upload"])
 
-UPLOAD_DIR = Path("/app/uploads")
-UPLOAD_DIR.mkdir(exist_ok=True)
+cloudinary.config(
+    cloud_name=settings.cloudinary_cloud_name,
+    api_key=settings.cloudinary_api_key,
+    api_secret=settings.cloudinary_api_secret,
+    secure=True,
+)
 
 ALLOWED_TYPES = {
     "image/jpeg", "image/png", "image/gif", "image/webp",
@@ -20,20 +27,6 @@ ALLOWED_TYPES = {
 MAX_SIZE_IMAGE = 10 * 1024 * 1024   # 10 MB
 MAX_SIZE_VIDEO = 100 * 1024 * 1024  # 100 MB
 MAX_SIZE_AUDIO = 20 * 1024 * 1024   # 20 MB
-
-EXT_MAP = {
-    "image/jpeg": ".jpg",
-    "image/png": ".png",
-    "image/gif": ".gif",
-    "image/webp": ".webp",
-    "video/mp4": ".mp4",
-    "video/webm": ".webm",
-    "audio/mpeg": ".mp3",
-    "audio/ogg": ".ogg",
-    "audio/wav": ".wav",
-    "audio/webm": ".webm",
-    "audio/aac": ".aac",
-}
 
 
 @router.post("")
@@ -68,8 +61,12 @@ async def upload_media(
             detail=f"File quá lớn. Giới hạn: {limit_mb} MB",
         )
 
-    ext = EXT_MAP[content_type]
-    filename = f"{uuid.uuid4().hex}{ext}"
-    (UPLOAD_DIR / filename).write_bytes(data)
+    result = await asyncio.to_thread(
+        cloudinary.uploader.upload,
+        io.BytesIO(data),
+        resource_type="auto",
+        folder="gymstore",
+    )
+    url = result["secure_url"]
 
-    return JSONResponse({"url": f"/uploads/{filename}", "type": media_type})
+    return JSONResponse({"url": url, "type": media_type})

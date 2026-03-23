@@ -1,0 +1,12 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(zip -r zikky_prj.zip backend frontend .env .env.example docker-compose.yml README.md)",
+      "Bash(zip -r zikky_prj.zip backend frontend .env .env.example docker-compose.yml README.md --exclude \"frontend/node_modules/*\" --exclude \"backend/__pycache__/*\" --exclude \"backend/app/**/__pycache__/*\" --exclude \"backend/alembic/**/__pycache__/*\" --exclude \"backend/*.db\" --exclude \"backend/uploads/*\")",
+      "Bash(git ls-remote:*)",
+      "Bash(git init:*)",
+      "Bash(git remote:*)",
+      "Bash(git fetch:*)"
+    ]
+  }
+}

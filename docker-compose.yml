@@ -1,33 +1,12 @@
 version: "3.9"
 
 services:
-  db:
-    image: postgres:16-alpine
-    environment:
-      POSTGRES_USER: ${POSTGRES_USER:-gymuser}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-gympass}
-      POSTGRES_DB: ${POSTGRES_DB:-gymstore}
-    ports:
-      - "5432:5432"
-    volumes:
-      - pgdata:/var/lib/postgresql/data
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-gymuser} -d ${POSTGRES_DB:-gymstore}"]
-      interval: 5s
-      timeout: 5s
-      retries: 5
-
   backend:
     build: ./backend
     ports:
       - "8000:8000"
-    environment:
-      DATABASE_URL: postgresql://${POSTGRES_USER:-gymuser}:${POSTGRES_PASSWORD:-gympass}@db:5432/${POSTGRES_DB:-gymstore}
-      SECRET_KEY: ${SECRET_KEY:-supersecretkey_change_in_production}
-      ACCESS_TOKEN_EXPIRE_MINUTES: ${ACCESS_TOKEN_EXPIRE_MINUTES:-60}
-    depends_on:
-      db:
-        condition: service_healthy
+    env_file:
+      - ./backend/.env
     volumes:
       - ./backend:/app
     command: >
@@ -45,6 +24,3 @@ services:
       - ./frontend:/app
       - /app/node_modules
     command: npm run dev -- --host
-
-volumes:
-  pgdata:
