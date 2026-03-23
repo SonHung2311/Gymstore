@@ -1,0 +1,37 @@
+from datetime import datetime
+
+from pydantic import BaseModel
+
+
+class BannerCreate(BaseModel):
+    title: str
+    subtitle: str | None = None
+    cta: str = "Xem ngay"
+    link: str = "/"
+    bg: str = "from-primary to-secondary"
+    is_active: bool = True
+    order: int = 0
+
+
+class BannerUpdate(BaseModel):
+    title: str | None = None
+    subtitle: str | None = None
+    cta: str | None = None
+    link: str | None = None
+    bg: str | None = None
+    is_active: bool | None = None
+    order: int | None = None
+
+
+class BannerResponse(BaseModel):
+    id: int
+    title: str
+    subtitle: str | None
+    cta: str
+    link: str
+    bg: str
+    is_active: bool
+    order: int
+    created_at: datetime
+
+    model_config = {"from_attributes": True}
