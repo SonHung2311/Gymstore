@@ -28,6 +28,13 @@ function encodeBg(from: string, to: string): string {
   return `${from},${to}`;
 }
 
+const PAGE_OPTIONS = [
+  { label: "Tất cả trang", value: "all" },
+  { label: "Trang chủ (/) only", value: "home" },
+  { label: "Gian hàng (/store) only", value: "store" },
+  { label: "Cộng đồng (/community) only", value: "community" },
+];
+
 interface BannerForm {
   title: string;
   subtitle: string;
@@ -37,17 +44,21 @@ interface BannerForm {
   to_color: string;
   is_active: boolean;
   order: number;
+  display_page: string;
+  hide_cta: boolean;
 }
 
 const EMPTY_FORM: BannerForm = {
   title: "",
   subtitle: "",
   cta: "Xem ngay",
-  link: "/",
+  link: "/store",
   from_color: "#6b3f1f",
   to_color: "#3d1f08",
   is_active: true,
   order: 0,
+  display_page: "all",
+  hide_cta: false,
 };
 
 export default function AdminBanners() {
@@ -94,6 +105,8 @@ export default function AdminBanners() {
       to_color,
       is_active: banner.is_active,
       order: banner.order,
+      display_page: banner.display_page ?? "all",
+      hide_cta: !banner.cta,
     });
     setModalBanner(banner);
   };
@@ -107,11 +120,12 @@ export default function AdminBanners() {
     const payload = {
       title: form.title,
       subtitle: form.subtitle || undefined,
-      cta: form.cta,
+      cta: form.hide_cta ? "" : form.cta,
       link: form.link,
       bg: encodeBg(form.from_color, form.to_color),
       is_active: form.is_active,
       order: form.order,
+      display_page: form.display_page,
     };
     if (modalBanner === "new") {
       createMutation.mutate(payload);
@@ -277,12 +291,36 @@ export default function AdminBanners() {
                 <label className="block text-sm font-medium mb-1">Mô tả</label>
                 <input className="input" value={form.subtitle} onChange={(e) => setForm((f) => ({ ...f, subtitle: e.target.value }))} />
               </div>
+              {/* Hiển thị tại */}
+              <div>
+                <label className="block text-sm font-medium mb-1">Hiển thị tại trang</label>
+                <select className="input" value={form.display_page}
+                  onChange={(e) => setForm((f) => ({ ...f, display_page: e.target.value }))}>
+                  {PAGE_OPTIONS.map((p) => (
+                    <option key={p.value} value={p.value}>{p.label}</option>
+                  ))}
+                </select>
+              </div>
+
+              {/* CTA */}
               <div>
                 <label className="block text-sm font-medium mb-1">Nút CTA</label>
-                <input className="input" value={form.cta} onChange={(e) => setForm((f) => ({ ...f, cta: e.target.value }))} />
+                <div className="flex items-center gap-3 mb-1.5">
+                  <label className="flex items-center gap-2 cursor-pointer text-sm text-gray-500">
+                    <input type="checkbox" checked={form.hide_cta}
+                      onChange={(e) => setForm((f) => ({ ...f, hide_cta: e.target.checked }))}
+                      className="accent-primary w-4 h-4" />
+                    Ẩn nút CTA
+                  </label>
+                </div>
+                {!form.hide_cta && (
+                  <input className="input" value={form.cta}
+                    onChange={(e) => setForm((f) => ({ ...f, cta: e.target.value }))}
+                    placeholder="Xem ngay" />
+                )}
               </div>
               <div>
-                <label className="block text-sm font-medium mb-1">Link đích (khi nhấn CTA)</label>
+                <label className="block text-sm font-medium mb-1">Link khi nhấn CTA</label>
                 <select
                   className="input mb-2"
                   value={LINK_PRESETS.some((p) => p.value === form.link) ? form.link : "__custom__"}

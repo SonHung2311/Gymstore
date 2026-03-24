@@ -7,10 +7,11 @@ class BannerCreate(BaseModel):
     title: str
     subtitle: str | None = None
     cta: str = "Xem ngay"
-    link: str = "/"
+    link: str = "/store"
     bg: str = "from-primary to-secondary"
     is_active: bool = True
     order: int = 0
+    display_page: str = "all"  # all | home | store | community
 
 
 class BannerUpdate(BaseModel):
@@ -21,6 +22,7 @@ class BannerUpdate(BaseModel):
     bg: str | None = None
     is_active: bool | None = None
     order: int | None = None
+    display_page: str | None = None
 
 
 class BannerResponse(BaseModel):
@@ -32,6 +34,7 @@ class BannerResponse(BaseModel):
     bg: str
     is_active: bool
     order: int
+    display_page: str
     created_at: datetime
 
     model_config = {"from_attributes": True}

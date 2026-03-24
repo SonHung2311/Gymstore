@@ -1,6 +1,6 @@
-"""0011 message media
+"""0011b message media
 
-Revision ID: 0011
+Revision ID: 0011b
 Revises: 0010
 Create Date: 2026-03-22
 """
@@ -9,7 +9,7 @@ import sqlalchemy as sa
 from alembic import op
 
 
-revision = "0011"
+revision = "0011b"
 down_revision = "0010"
 branch_labels = None
 depends_on = None

@@ -6,6 +6,7 @@ import Layout from "./components/layout/Layout";
 import AdminLayout from "./pages/admin/AdminLayout";
 import AdminBanners from "./pages/admin/AdminBanners";
 import AdminChat from "./pages/admin/AdminChat";
+import AdminTags from "./pages/admin/AdminTags";
 import ContactPage from "./pages/contact/ContactPage";
 import AdminVouchers from "./pages/admin/AdminVouchers";
 import AdminOrders from "./pages/admin/AdminOrders";
@@ -88,6 +89,7 @@ export default function App() {
         <Route path="users" element={<AdminUsers />} />
         <Route path="posts" element={<AdminPosts />} />
         <Route path="banners" element={<AdminBanners />} />
+        <Route path="tags" element={<AdminTags />} />
         <Route path="chat" element={<AdminChat />} />
       </Route>
     </Routes>

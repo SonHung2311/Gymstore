@@ -6,6 +6,16 @@ interface Props {
   banners: Banner[];
 }
 
+// Parse bg field: "#color1,#color2" → gradient style, fallback for old Tailwind class values
+function parseBannerBg(bg: string): string {
+  if (bg.includes("#")) {
+    const [from, to] = bg.split(",").map((s) => s.trim());
+    return `linear-gradient(135deg, ${from || "#6b3f1f"}, ${to || "#3d1f08"})`;
+  }
+  // Fallback for legacy Tailwind-class-based values
+  return "linear-gradient(135deg, #6b3f1f, #3d1f08)";
+}
+
 export default function HeroCarousel({ banners }: Props) {
   const [current, setCurrent] = useState(0);
 
@@ -32,19 +42,24 @@ export default function HeroCarousel({ banners }: Props) {
       {/* Slide */}
       <div
         key={banner.id}
-        className={`bg-gradient-to-br ${banner.bg} text-white py-24 px-4 transition-all duration-500`}
+        className="text-white py-24 px-4 transition-all duration-500"
+        style={{ background: parseBannerBg(banner.bg) }}
       >
         <div className="max-w-4xl mx-auto text-center">
           <h1 className="text-4xl md:text-5xl font-bold text-white mb-4 leading-tight">
             {banner.title}
           </h1>
-          <p className="text-white/80 text-lg mb-8 max-w-2xl mx-auto">{banner.subtitle}</p>
-          <Link
-            to={banner.link}
-            className="inline-block bg-white text-primary font-semibold px-8 py-3 rounded-xl hover:bg-light transition-colors shadow-lg"
-          >
-            {banner.cta} →
-          </Link>
+          {banner.subtitle && (
+            <p className="text-white/80 text-lg mb-8 max-w-2xl mx-auto">{banner.subtitle}</p>
+          )}
+          {banner.cta && (
+            <Link
+              to={banner.link}
+              className="inline-block bg-white text-primary font-semibold px-8 py-3 rounded-xl hover:bg-light transition-colors shadow-lg"
+            >
+              {banner.cta} →
+            </Link>
+          )}
         </div>
       </div>
 

@@ -187,19 +187,29 @@ export interface Comment {
   created_at: string;
 }
 
+export interface Tag {
+  id: number;
+  name: string;
+  color: string;
+  is_active: boolean;
+  created_at: string;
+}
+
 export interface Banner {
   id: number;
   title: string;
-  subtitle: string;
+  subtitle: string | null;
   cta: string;
   link: string;
   bg: string;
+  display_page: string; // "all" | "home" | "store" | "community"
 }
 
 export interface BannerAdmin extends Banner {
   subtitle: string | null;
   is_active: boolean;
   order: number;
+  display_page: string;
   created_at: string;
 }
 

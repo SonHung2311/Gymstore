@@ -6,6 +6,8 @@ import { useQuery } from "@tanstack/react-query";
 import { useState, useEffect } from "react";
 import { useSearchParams } from "react-router-dom";
 import { productsApi } from "../api/products";
+import { homeApi } from "../api/community";
+import HeroCarousel from "../components/ui/HeroCarousel";
 import ProductCard from "../components/product/ProductCard";
 import ProductFilters from "../components/product/ProductFilters";
 import Spinner from "../components/ui/Spinner";
@@ -46,8 +48,20 @@ export default function Store() {
     queryFn: () => productsApi.list(queryParams).then((r) => r.data),
   });
 
+  const { data: homeData } = useQuery({
+    queryKey: ["home"],
+    queryFn: () => homeApi.getData().then((r) => r.data),
+    staleTime: 5 * 60 * 1000,
+  });
+
+  const storeBanners = (homeData?.banners ?? []).filter(
+    (b) => b.display_page === "store" || b.display_page === "all"
+  );
+
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+    <div>
+      {storeBanners.length > 0 && <HeroCarousel banners={storeBanners} />}
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
       <h1 className="text-3xl font-semibold mb-8">Gian hàng</h1>
       <div className="flex flex-col lg:flex-row gap-8">
         <div className="lg:w-64 shrink-0">
@@ -87,6 +101,7 @@ export default function Store() {
             </>
           )}
         </div>
+      </div>
       </div>
     </div>
   );

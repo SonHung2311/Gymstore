@@ -21,7 +21,7 @@ def home_data(db: Session = Depends(get_db)):
 
     return {
         "banners": [
-            {"id": b.id, "title": b.title, "subtitle": b.subtitle, "cta": b.cta, "link": b.link, "bg": b.bg}
+        {"id": b.id, "title": b.title, "subtitle": b.subtitle, "cta": b.cta, "link": b.link, "bg": b.bg, "display_page": b.display_page}
             for b in banners
         ],
         "top_products": [

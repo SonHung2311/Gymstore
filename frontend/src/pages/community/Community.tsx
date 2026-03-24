@@ -1,18 +1,20 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { Link } from "react-router-dom";
-import { communityApi, type CreatePostPayload } from "../../api/community";
+import { communityApi, homeApi, type CreatePostPayload } from "../../api/community";
+import { tagsApi } from "../../api/tags";
+import HeroCarousel from "../../components/ui/HeroCarousel";
 import MediaDropzone from "../../components/community/MediaDropzone";
 import PostGridCard from "../../components/community/PostGridCard";
 import Spinner from "../../components/ui/Spinner";
-import { TAGS, TAG_COLORS } from "../../constants/tags";
+import type { Tag } from "../../types";
 import { useAuthStore } from "../../store/authStore";
 
 const PAGE_SIZES = [6, 12, 24];
 
 // ── Create Post Modal ────────────────────────────────────────────────────────
 
-function CreatePostModal({ onClose }: { onClose: () => void }) {
+function CreatePostModal({ onClose, tags }: { onClose: () => void; tags: Tag[] }) {
   const [form, setForm] = useState<CreatePostPayload>({ title: "", content: "", tags: [] });
   const [mediaType, setMediaType] = useState<"image" | "video" | "link" | null>(null);
   const [error, setError] = useState("");
@@ -85,15 +87,15 @@ function CreatePostModal({ onClose }: { onClose: () => void }) {
 
             {/* Preset tags */}
             <div className="flex flex-wrap gap-2 mb-3">
-              {TAGS.map((tag) => (
-                <button key={tag} type="button" onClick={() => toggleTag(tag)}
-                  disabled={!form.tags.includes(tag) && form.tags.length >= 5}
+              {tags.map((tag) => (
+                <button key={tag.id} type="button" onClick={() => toggleTag(tag.name)}
+                  disabled={!form.tags.includes(tag.name) && form.tags.length >= 5}
                   className={`badge cursor-pointer transition-all disabled:opacity-40 disabled:cursor-not-allowed ${
-                    form.tags.includes(tag)
-                      ? `${TAG_COLORS[tag]} ring-2 ring-offset-1 ring-current`
+                    form.tags.includes(tag.name)
+                      ? `${tag.color} ring-2 ring-offset-1 ring-current`
                       : "bg-gray-100 text-gray-500 hover:bg-gray-200"
                   }`}>
-                  {tag}
+                  {tag.name}
                 </button>
               ))}
             </div>
@@ -123,7 +125,7 @@ function CreatePostModal({ onClose }: { onClose: () => void }) {
             {form.tags.length > 0 && (
               <div className="flex flex-wrap gap-1.5 mt-2">
                 {form.tags.map((tag) => (
-                  <span key={tag} className={`badge flex items-center gap-1 ${TAG_COLORS[tag] ?? "bg-primary/10 text-primary"}`}>
+                  <span key={tag} className={`badge flex items-center gap-1 ${tags.find((t: Tag) => t.name === tag)?.color ?? "bg-primary/10 text-primary"}`}>
                     {tag}
                     <button type="button" onClick={() => toggleTag(tag)} className="hover:opacity-70 leading-none">×</button>
                   </span>
@@ -164,6 +166,22 @@ export default function Community() {
       communityApi.posts({ tag: activeTag, sort, page, limit: pageSize }).then((r) => r.data),
   });
 
+  const { data: homeData } = useQuery({
+    queryKey: ["home"],
+    queryFn: () => homeApi.getData().then((r) => r.data),
+    staleTime: 5 * 60 * 1000,
+  });
+
+  const { data: tagList = [] } = useQuery<Tag[]>({
+    queryKey: ["tags"],
+    queryFn: () => tagsApi.list().then((r) => r.data),
+    staleTime: 5 * 60 * 1000,
+  });
+
+  const communityBanners = (homeData?.banners ?? []).filter(
+    (b) => b.display_page === "community" || b.display_page === "all"
+  );
+
   const total = data?.total ?? 0;
   const totalPages = data?.pages ?? 1;
   const from = total === 0 ? 0 : (page - 1) * pageSize + 1;
@@ -171,7 +189,9 @@ export default function Community() {
   const allPosts = data?.items ?? [];
 
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+    <div>
+      {communityBanners.length > 0 && <HeroCarousel banners={communityBanners} />}
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
       <div className="flex items-center justify-between mb-6">
         <div>
           <h1 className="text-3xl font-semibold">Cộng đồng</h1>
@@ -210,14 +230,14 @@ export default function Community() {
                 }`}>
                 Tất cả
               </button>
-              {TAGS.map((tag) => (
-                <button key={tag} onClick={() => { setActiveTag(activeTag === tag ? undefined : tag); setPage(1); }}
+              {tagList.map((tag: Tag) => (
+                <button key={tag.id} onClick={() => { setActiveTag(activeTag === tag.name ? undefined : tag.name); setPage(1); }}
                   className={`text-sm px-3 py-2 rounded-lg text-left transition-colors ${
-                    activeTag === tag
-                      ? `${TAG_COLORS[tag]} font-medium`
+                    activeTag === tag.name
+                      ? `${tag.color} font-medium`
                       : "bg-white border border-light text-dark hover:bg-surface"
                   }`}>
-                  {tag}
+                  {tag.name}
                 </button>
               ))}
             </div>
@@ -282,7 +302,8 @@ export default function Community() {
         </div>
       </div>
 
-      {showCreate && <CreatePostModal onClose={() => setShowCreate(false)} />}
+      {showCreate && <CreatePostModal onClose={() => setShowCreate(false)} tags={tagList} />}
+      </div>
     </div>
   );
 }

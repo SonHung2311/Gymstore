@@ -13,6 +13,10 @@ export default function Home() {
     queryFn: () => homeApi.getData().then((r) => r.data),
   });
 
+  const homeBanners = (data?.banners ?? []).filter(
+    (b) => b.display_page === "home" || b.display_page === "all"
+  );
+
   return (
     <div>
       {/* ── Hero Carousel ──────────────────────────────────────────── */}
@@ -21,8 +25,9 @@ export default function Home() {
           <Spinner className="border-white border-t-transparent" />
         </div>
       ) : (
-        <HeroCarousel banners={data?.banners ?? []} />
+        <HeroCarousel banners={homeBanners} />
       )}
+
 
       {/* ── Featured Products ─────────────────────────────────────── */}
       <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-14">

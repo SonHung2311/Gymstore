@@ -17,6 +17,7 @@ class Banner(Base):
     bg: Mapped[str] = mapped_column(String(100), nullable=False, default="from-primary to-secondary")
     is_active: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
     order: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    display_page: Mapped[str] = mapped_column(String(20), nullable=False, default="all")  # all | home | store | community
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now()
     )

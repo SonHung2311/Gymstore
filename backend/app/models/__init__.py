@@ -7,6 +7,7 @@ from app.models.community import Post, Comment, Like
 from app.models.banner import Banner
 from app.models.voucher import Voucher, VoucherUsage
 from app.models.chat import Conversation, ConversationParticipant, Message
+from app.models.tag import Tag
 
 __all__ = [
     "User",
@@ -16,4 +17,5 @@ __all__ = [
     "Banner",
     "Voucher", "VoucherUsage",
     "Conversation", "ConversationParticipant", "Message",
+    "Tag",
 ]
