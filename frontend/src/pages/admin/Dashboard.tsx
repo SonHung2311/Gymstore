@@ -1,9 +1,10 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useState } from "react";
 import { Link } from "react-router-dom";
 import { adminApi } from "../../api/orders";
 import Badge from "../../components/ui/Badge";
 import Spinner from "../../components/ui/Spinner";
-import type { Order, RevenueEntry, TopProduct } from "../../types";
+import type { RevenueEntry, TopProduct } from "../../types";
 
 // ── Mini bar chart ────────────────────────────────────────────────────────────
 
@@ -95,8 +96,11 @@ const PAYMENT_STATUS_COLORS: Record<string, string> = {
   refunded: "bg-gray-100 text-gray-600",
 };
 
+const ACTION_LIMIT = 7;
+
 export default function Dashboard() {
   const qc = useQueryClient();
+  const [showAllActions, setShowAllActions] = useState(false);
 
   const { data: revenue, isLoading: revLoading } = useQuery({
     queryKey: ["admin", "revenue"],
@@ -108,10 +112,11 @@ export default function Dashboard() {
     queryFn: () => adminApi.topProducts().then((r) => r.data as TopProduct[]),
   });
 
-  const { data: orders } = useQuery({
+  const { data: ordersData } = useQuery({
     queryKey: ["admin", "orders-dashboard"],
-    queryFn: () => adminApi.listOrders().then((r) => r.data as Order[]),
+    queryFn: () => adminApi.listOrders({ page: 1, limit: 200 }).then((r) => r.data),
   });
+  const orders = ordersData?.items;
 
   const invalidate = () => {
     qc.invalidateQueries({ queryKey: ["admin", "orders-dashboard"] });
@@ -143,7 +148,7 @@ export default function Dashboard() {
 
   return (
     <div className="space-y-8">
-      <h1 className="text-2xl font-semibold">Dashboard</h1>
+      <h1 className="text-2xl font-semibold">Thống kê</h1>
 
       {/* ── KPI cards ── */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
@@ -193,17 +198,26 @@ export default function Dashboard() {
       {/* ── Cần xử lý ngay ── */}
       {actionItems.length > 0 && (
         <div className="card overflow-hidden">
-          <div className="flex items-center gap-3 px-5 py-4 border-b border-light bg-yellow-50/50">
-            <svg className="w-4 h-4 text-yellow-500" fill="currentColor" viewBox="0 0 20 20">
+          <button
+            onClick={() => setShowAllActions((v) => !v)}
+            className="w-full flex items-center gap-3 px-5 py-4 border-b border-light bg-yellow-50/50 hover:bg-yellow-50 transition-colors text-left"
+          >
+            <svg className="w-4 h-4 text-yellow-500 shrink-0" fill="currentColor" viewBox="0 0 20 20">
               <path fillRule="evenodd" d="M8.485 2.495c.673-1.167 2.357-1.167 3.03 0l6.28 10.875c.673 1.167-.17 2.625-1.516 2.625H3.72c-1.347 0-2.189-1.458-1.515-2.625L8.485 2.495ZM10 5a.75.75 0 0 1 .75.75v3.5a.75.75 0 0 1-1.5 0v-3.5A.75.75 0 0 1 10 5Zm0 9a1 1 0 1 0 0-2 1 1 0 0 0 0 2Z" clipRule="evenodd" />
             </svg>
             <h2 className="font-semibold text-sm text-yellow-800">Cần xử lý ngay</h2>
-            <span className="ml-auto bg-yellow-500 text-white text-xs font-bold px-2 py-0.5 rounded-full">
+            <span className="ml-2 bg-yellow-500 text-white text-xs font-bold px-2 py-0.5 rounded-full">
               {actionItems.length}
             </span>
-          </div>
+            <svg
+              className={`w-4 h-4 text-yellow-600 ml-auto transition-transform duration-200 ${showAllActions ? "rotate-180" : ""}`}
+              fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24"
+            >
+              <path strokeLinecap="round" strokeLinejoin="round" d="m19 9-7 7-7-7" />
+            </svg>
+          </button>
           <div className="divide-y divide-light">
-            {actionItems.map((order) => (
+            {(showAllActions ? actionItems : actionItems.slice(0, ACTION_LIMIT)).map((order) => (
               <div key={order.id} className="flex items-center gap-4 px-5 py-3 hover:bg-surface/50 transition-colors">
                 <div className="min-w-0 flex-1">
                   <div className="flex items-center gap-2 flex-wrap">
@@ -242,6 +256,16 @@ export default function Dashboard() {
               </div>
             ))}
           </div>
+          {actionItems.length > ACTION_LIMIT && (
+            <button
+              onClick={() => setShowAllActions((v) => !v)}
+              className="w-full py-2.5 text-xs font-medium text-yellow-700 bg-yellow-50/50 hover:bg-yellow-50 border-t border-light transition-colors"
+            >
+              {showAllActions
+                ? "Thu gọn ▲"
+                : `Xem thêm ${actionItems.length - ACTION_LIMIT} mục ▼`}
+            </button>
+          )}
         </div>
       )}
 

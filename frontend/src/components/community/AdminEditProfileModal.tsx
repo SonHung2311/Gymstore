@@ -13,9 +13,9 @@ export default function AdminEditProfileModal({ user, onClose }: Props) {
   const qc = useQueryClient();
   const [form, setForm] = useState({
     full_name: user.full_name ?? "",
-    phone: "",
+    phone: user.phone ?? "",
     avatar: user.avatar ?? "",
-    bio: "",
+    bio: user.bio ?? "",
   });
 
   const mutation = useMutation({

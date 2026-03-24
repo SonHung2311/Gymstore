@@ -49,6 +49,14 @@ class OrderResponse(BaseModel):
     model_config = {"from_attributes": True}
 
 
+class OrderListResponse(BaseModel):
+    items: list[OrderResponse]
+    total: int
+    page: int
+    limit: int
+    pages: int
+
+
 class OrderStatusUpdate(BaseModel):
     status: Literal["pending", "confirmed", "shipping", "delivered", "cancelled"]
 

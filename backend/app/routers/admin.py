@@ -13,7 +13,7 @@ from app.schemas.auth import AdminUserListResponse, AdminUserResponse, AdminUser
 from app.schemas.community import UserProfileUpdate
 from app.schemas.banner import BannerCreate, BannerResponse, BannerUpdate
 from app.schemas.community import PostListResponse, PostResponse
-from app.schemas.order import OrderPaymentUpdate, OrderResponse, OrderStatusUpdate
+from app.schemas.order import OrderListResponse, OrderPaymentUpdate, OrderResponse, OrderStatusUpdate
 from app.models.product import AttributeType as AttributeTypeModel
 from app.models.product import ProductAttribute as ProductAttributeModel
 from app.models.product import ProductVariant as ProductVariantModel
@@ -62,6 +62,17 @@ from app.services.product import (
 )
 
 router = APIRouter(prefix="/api/admin", tags=["admin"])
+
+
+def _upsert_attribute_type(db: Session, name: str, values: list[str]) -> None:
+    """Merge name+values into the global AttributeType table (no commit)."""
+    existing = db.query(AttributeTypeModel).filter(AttributeTypeModel.name == name).first()
+    if existing:
+        merged = sorted(set(existing.values) | set(values))
+        if merged != sorted(existing.values):
+            existing.values = merged
+    else:
+        db.add(AttributeTypeModel(name=name, values=sorted(values)))
 
 
 def _slugify(text: str) -> str:
@@ -274,6 +285,7 @@ def admin_create_product_attribute(
         raise HTTPException(status_code=404, detail="Product not found")
     attr = ProductAttributeModel(product_id=product_id, name=body.name, values=body.values, display_order=body.display_order)
     db.add(attr)
+    _upsert_attribute_type(db, body.name, body.values)
     db.commit()
     db.refresh(attr)
     return attr
@@ -293,6 +305,7 @@ def admin_update_product_attribute(
     attr.name = body.name
     attr.values = body.values
     attr.display_order = body.display_order
+    _upsert_attribute_type(db, body.name, body.values)
     db.commit()
     db.refresh(attr)
     return attr
@@ -396,14 +409,16 @@ def admin_delete_product_variant(
 
 # ── Orders ───────────────────────────────────────────────────────────────────
 
-@router.get("/orders", response_model=list[OrderResponse])
+@router.get("/orders", response_model=OrderListResponse)
 def admin_list_orders(
     status: str | None = Query(default=None),
     payment_status: str | None = Query(default=None),
+    page: int = Query(default=1, ge=1),
+    limit: int = Query(default=20, ge=1, le=200),
     db: Session = Depends(get_db),
     _: User = Depends(require_admin),
 ):
-    return get_all_orders_filtered(db, status, payment_status)
+    return get_all_orders_filtered(db, status, payment_status, page, limit)
 
 
 @router.put("/orders/{order_id}/status", response_model=OrderResponse)

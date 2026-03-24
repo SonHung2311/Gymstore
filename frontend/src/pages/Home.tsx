@@ -105,8 +105,18 @@ export default function Home() {
                   <div className="flex items-center justify-between mt-auto text-xs text-gray-400">
                     <span>{post.author.full_name || "Ẩn danh"}</span>
                     <span className="flex gap-3">
-                      <span>❤ {post.like_count}</span>
-                      <span>💬 {post.comment_count}</span>
+                      <span className="flex items-center gap-1">
+                        <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}>
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M21 8.25c0-2.485-2.099-4.5-4.688-4.5-1.935 0-3.597 1.126-4.312 2.733-.715-1.607-2.377-2.733-4.313-2.733C5.1 3.75 3 5.765 3 8.25c0 7.22 9 12 9 12s9-4.78 9-12Z" />
+                        </svg>
+                        {post.like_count}
+                      </span>
+                      <span className="flex items-center gap-1">
+                        <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}>
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M12 20.25c4.97 0 9-3.694 9-8.25s-4.03-8.25-9-8.25S3 7.444 3 12c0 2.104.859 4.023 2.273 5.48.432.447.74 1.04.586 1.641a4.483 4.483 0 0 1-.923 1.785A5.969 5.969 0 0 0 6 21c1.282 0 2.47-.402 3.445-1.087.81.22 1.668.337 2.555.337Z" />
+                        </svg>
+                        {post.comment_count}
+                      </span>
                     </span>
                   </div>
                 </Link>
@@ -123,11 +133,17 @@ export default function Home() {
           {[
             { icon: "🏋️", title: "Thiết bị chuyên nghiệp", desc: "Nguồn hàng chính hãng, kiểm định chất lượng nghiêm ngặt." },
             { icon: "🚚", title: "Giao hàng toàn quốc", desc: "Vận chuyển nhanh, đóng gói chắc chắn, bảo hành 12 tháng." },
-            { icon: "💬", title: "Cộng đồng năng động", desc: "Chia sẻ lộ trình, kinh nghiệm và động lực cùng hàng nghìn thành viên." },
+            { icon: null, title: "Cộng đồng năng động", desc: "Chia sẻ lộ trình, kinh nghiệm và động lực cùng hàng nghìn thành viên." },
             { icon: "🔒", title: "Thanh toán an toàn", desc: "Hỗ trợ COD và thanh toán online, bảo mật tuyệt đối." },
           ].map((f) => (
             <div key={f.title} className="card p-6 text-center">
-              <div className="text-4xl mb-3">{f.icon}</div>
+              <div className="text-4xl mb-3 flex justify-center">
+                {f.icon ?? (
+                  <svg className="w-10 h-10 text-primary" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M12 20.25c4.97 0 9-3.694 9-8.25s-4.03-8.25-9-8.25S3 7.444 3 12c0 2.104.859 4.023 2.273 5.48.432.447.74 1.04.586 1.641a4.483 4.483 0 0 1-.923 1.785A5.969 5.969 0 0 0 6 21c1.282 0 2.47-.402 3.445-1.087.81.22 1.668.337 2.555.337Z" />
+                  </svg>
+                )}
+              </div>
               <h3 className="font-semibold mb-2 text-dark">{f.title}</h3>
               <p className="text-sm text-gray-500 leading-relaxed">{f.desc}</p>
             </div>

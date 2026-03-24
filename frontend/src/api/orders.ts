@@ -1,5 +1,5 @@
 import { apiClient } from "./client";
-import type { AdminUser, AdminUserListResponse, BannerAdmin, Order, PostListResponse, RevenueEntry, TopProduct, Voucher } from "../types";
+import type { AdminUser, AdminUserListResponse, BannerAdmin, Order, OrderListResponse, PostListResponse, RevenueEntry, TopProduct, Voucher } from "../types";
 
 export interface CheckoutPayload {
   payment_method: "cod" | "bank_transfer";
@@ -41,8 +41,8 @@ export const adminApi = {
     apiClient.delete(`/api/admin/products/${id}`),
 
   // Orders
-  listOrders: (params: { status?: string; payment_status?: string } = {}) =>
-    apiClient.get<Order[]>("/api/admin/orders", { params }),
+  listOrders: (params: { status?: string; payment_status?: string; page?: number; limit?: number } = {}) =>
+    apiClient.get<OrderListResponse>("/api/admin/orders", { params }),
   updateOrderStatus: (id: string, status: string) =>
     apiClient.put<Order>(`/api/admin/orders/${id}/status`, { status }),
   updatePaymentStatus: (id: string, payment_status: string) =>

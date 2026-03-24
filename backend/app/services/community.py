@@ -1,6 +1,7 @@
 import math
 
-from sqlalchemy import desc, func
+from sqlalchemy import cast, desc, func
+from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Session, joinedload
 
 from app.models.community import Comment, Like, Post
@@ -19,8 +20,8 @@ def list_posts(
 ) -> dict:
     query = db.query(Post).options(joinedload(Post.author))
     if tag:
-        # JSON array containment: filter posts whose tags list contains the given tag
-        query = query.filter(Post.tags.contains([tag]))
+        # Cast JSON → JSONB for @> containment operator on PostgreSQL
+        query = query.filter(cast(Post.tags, JSONB).contains([tag]))
     if search:
         query = query.filter(Post.title.ilike(f"%{search}%"))
     if user_id:

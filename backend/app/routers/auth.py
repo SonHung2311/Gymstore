@@ -11,6 +11,7 @@ from app.schemas.auth import (
     TokenResponse,
     UserResponse,
 )
+from app.services.email import send_reset_password_email
 from app.services.auth import (
     create_access_token,
     create_user,
@@ -46,10 +47,9 @@ def forgot_password(body: ForgotPasswordRequest, db: Session = Depends(get_db)):
     user = get_user_by_email(db, body.email)
     if user:
         token = generate_reset_token(db, user)
-        # In production: send email with token. Here we return it for dev convenience.
-        return {"message": "Reset token generated", "reset_token": token}
+        send_reset_password_email(user.email, token)
     # Always return 200 to avoid email enumeration
-    return {"message": "If the email exists, a reset link has been sent"}
+    return {"message": "Nếu email tồn tại, link đặt lại mật khẩu đã được gửi"}
 
 
 @router.post("/reset-password", status_code=status.HTTP_200_OK)

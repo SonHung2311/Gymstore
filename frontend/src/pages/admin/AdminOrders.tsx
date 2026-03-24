@@ -5,6 +5,8 @@ import Badge from "../../components/ui/Badge";
 import Spinner from "../../components/ui/Spinner";
 import type { Order, OrderItem } from "../../types";
 
+const PAGE_SIZES = [10, 20, 50];
+
 // ── Constants ─────────────────────────────────────────────────────────────────
 
 const ORDER_STATUSES = ["pending", "confirmed", "shipping", "delivered", "cancelled"] as const;
@@ -268,19 +270,29 @@ export default function AdminOrders() {
   const [statusFilter, setStatusFilter] = useState("");
   const [paymentFilter, setPaymentFilter] = useState("");
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(20);
 
-  const { data: orders, isLoading } = useQuery({
-    queryKey: ["admin", "orders", statusFilter, paymentFilter],
+  const { data, isLoading } = useQuery({
+    queryKey: ["admin", "orders", statusFilter, paymentFilter, page, pageSize],
     queryFn: () =>
       adminApi.listOrders({
         status: statusFilter || undefined,
         payment_status: paymentFilter || undefined,
+        page,
+        limit: pageSize,
       }).then((r) => r.data),
   });
 
+  const orders = data?.items;
+  const total = data?.total ?? 0;
+  const totalPages = data?.pages ?? 1;
+  const from = total === 0 ? 0 : (page - 1) * pageSize + 1;
+  const to = Math.min(page * pageSize, total);
+
   // Always pass the freshest order data to the drawer (so stepper/status updates immediately)
   const liveOrder = selectedOrder
-    ? ((orders as Order[] | undefined)?.find((o) => o.id === selectedOrder.id) ?? selectedOrder)
+    ? (orders?.find((o) => o.id === selectedOrder.id) ?? selectedOrder)
     : null;
 
   const confirmPaymentMutation = useMutation({
@@ -291,12 +303,15 @@ export default function AdminOrders() {
   return (
     <>
       <div className="space-y-6">
-        <h1 className="text-2xl font-semibold">Quản lý đơn hàng</h1>
+        <div className="flex items-center justify-between">
+          <h1 className="text-2xl font-semibold">Quản lý đơn hàng</h1>
+          {!isLoading && <p className="text-sm text-gray-400">{total} đơn hàng</p>}
+        </div>
 
         {/* Filter mode toggle */}
         <div className="flex gap-2">
           <button
-            onClick={() => { setFilterMode("order"); setPaymentFilter(""); }}
+            onClick={() => { setFilterMode("order"); setPaymentFilter(""); setPage(1); }}
             className={`px-4 py-1.5 rounded-full text-sm font-medium transition-colors ${
               filterMode === "order" ? "bg-dark text-white" : "bg-white border border-light text-dark hover:bg-surface"
             }`}
@@ -304,7 +319,7 @@ export default function AdminOrders() {
             Lọc theo trạng thái đơn
           </button>
           <button
-            onClick={() => { setFilterMode("payment"); setStatusFilter(""); }}
+            onClick={() => { setFilterMode("payment"); setStatusFilter(""); setPage(1); }}
             className={`px-4 py-1.5 rounded-full text-sm font-medium transition-colors ${
               filterMode === "payment" ? "bg-dark text-white" : "bg-white border border-light text-dark hover:bg-surface"
             }`}
@@ -317,7 +332,7 @@ export default function AdminOrders() {
         {filterMode === "order" ? (
           <div className="flex gap-2 flex-wrap">
             {(["", ...ORDER_STATUSES] as string[]).map((s) => (
-              <button key={s} onClick={() => setStatusFilter(s)}
+              <button key={s} onClick={() => { setStatusFilter(s); setPage(1); }}
                 className={`px-4 py-1.5 rounded-full text-sm font-medium transition-colors ${
                   statusFilter === s ? "bg-primary text-white" : "bg-white border border-light text-dark hover:bg-surface"
                 }`}>
@@ -328,7 +343,7 @@ export default function AdminOrders() {
         ) : (
           <div className="flex gap-2 flex-wrap">
             {(["", "unpaid", "pending_verification", "paid", "refunded"] as string[]).map((s) => (
-              <button key={s} onClick={() => setPaymentFilter(s)}
+              <button key={s} onClick={() => { setPaymentFilter(s); setPage(1); }}
                 className={`px-4 py-1.5 rounded-full text-sm font-medium transition-colors ${
                   paymentFilter === s ? "bg-primary text-white" : "bg-white border border-light text-dark hover:bg-surface"
                 }`}>
@@ -341,6 +356,7 @@ export default function AdminOrders() {
         {isLoading ? (
           <div className="flex justify-center py-12"><Spinner /></div>
         ) : (
+          <>
           <div className="card overflow-hidden">
             <table className="w-full text-sm">
               <thead className="bg-light/50">
@@ -355,7 +371,7 @@ export default function AdminOrders() {
                 </tr>
               </thead>
               <tbody>
-                {(orders as Order[] | undefined)?.map((order) => (
+                {orders?.map((order) => (
                   <tr
                     key={order.id}
                     onClick={() => setSelectedOrder(order)}
@@ -411,10 +427,44 @@ export default function AdminOrders() {
                 ))}
               </tbody>
             </table>
-            {(orders as Order[] | undefined)?.length === 0 && (
+            {orders?.length === 0 && (
               <p className="text-center text-gray-400 py-8">Không có đơn hàng nào</p>
             )}
           </div>
+
+          {/* Pagination footer */}
+          {total > 0 && (
+            <div className="flex items-center justify-between text-sm text-gray-500 mt-4">
+              <span>Hiển thị {from}–{to} trong {total}</span>
+              <div className="flex items-center gap-3">
+                <div className="flex items-center gap-1.5">
+                  <span className="text-xs">Hiển thị:</span>
+                  <select
+                    className="border border-light rounded-lg px-2 py-1 text-sm bg-white"
+                    value={pageSize}
+                    onChange={(e) => { setPageSize(Number(e.target.value)); setPage(1); }}
+                  >
+                    {PAGE_SIZES.map((s) => <option key={s} value={s}>{s}</option>)}
+                  </select>
+                </div>
+                {totalPages > 1 && (
+                  <div className="flex items-center gap-1">
+                    <button disabled={page === 1} onClick={() => setPage(page - 1)}
+                      className="px-2 py-1 rounded border border-light bg-white hover:bg-surface disabled:opacity-40 transition-colors">‹</button>
+                    {Array.from({ length: totalPages }, (_, i) => i + 1).map((p) => (
+                      <button key={p} onClick={() => setPage(p)}
+                        className={`px-2.5 py-1 rounded text-sm font-medium transition-colors ${p === page ? "bg-primary text-white border border-primary" : "border border-light bg-white hover:bg-surface"}`}>
+                        {p}
+                      </button>
+                    ))}
+                    <button disabled={page === totalPages} onClick={() => setPage(page + 1)}
+                      className="px-2 py-1 rounded border border-light bg-white hover:bg-surface disabled:opacity-40 transition-colors">›</button>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+          </>
         )}
       </div>
 

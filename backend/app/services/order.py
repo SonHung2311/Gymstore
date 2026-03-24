@@ -172,14 +172,28 @@ def update_payment_status(db: Session, order: Order, status: str) -> Order:
 
 
 def get_all_orders_filtered(
-    db: Session, status: str | None = None, payment_status: str | None = None
-) -> list[Order]:
+    db: Session,
+    status: str | None = None,
+    payment_status: str | None = None,
+    page: int = 1,
+    limit: int = 20,
+) -> dict:
+    import math
     query = db.query(Order)
     if status:
         query = query.filter(Order.status == status)
     if payment_status:
         query = query.filter(Order.payment_status == payment_status)
-    return query.order_by(Order.created_at.desc()).all()
+    query = query.order_by(Order.created_at.desc())
+    total = query.count()
+    items = query.offset((page - 1) * limit).limit(limit).all()
+    return {
+        "items": items,
+        "total": total,
+        "page": page,
+        "limit": limit,
+        "pages": math.ceil(total / limit) if total else 0,
+    }
 
 
 def get_revenue_stats(db: Session) -> list[dict]:

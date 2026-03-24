@@ -1,17 +1,11 @@
-from pathlib import Path
-
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.staticfiles import StaticFiles
 
 from app.routers import admin, auth, cart, community, home, orders, products
 from app.routers.og_preview import router as og_router
 from app.routers.upload import router as upload_router
 from app.routers.vouchers import router as vouchers_router
 from app.routers.chat import router as chat_router
-
-UPLOAD_DIR = Path("/app/uploads")
-UPLOAD_DIR.mkdir(exist_ok=True)
 
 app = FastAPI(
     title="Gym Store API",
@@ -27,9 +21,6 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
-
-# Serve uploaded media files
-app.mount("/uploads", StaticFiles(directory=UPLOAD_DIR), name="uploads")
 
 app.include_router(home.router)
 app.include_router(auth.router)

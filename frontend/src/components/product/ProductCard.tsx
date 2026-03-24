@@ -23,6 +23,12 @@ export default function ProductCard({ product, basePath = "/store" }: Props) {
     }
   };
 
+  // If product has variants, stock is determined by whether any active variant has stock
+  const hasVariants = product.variants.length > 0;
+  const hasStock = hasVariants
+    ? product.variants.some((v) => v.is_active && v.stock_quantity > 0)
+    : product.stock_quantity > 0;
+
   return (
     <Link to={`${basePath}/products/${product.slug}`} className="card group flex flex-col hover:shadow-md transition-shadow">
       {/* Product image */}
@@ -48,15 +54,17 @@ export default function ProductCard({ product, basePath = "/store" }: Props) {
           <span className="text-primary font-bold text-lg">
             {product.price.toLocaleString("vi-VN")}₫
           </span>
-          {product.stock_quantity > 0 ? (
+          {!hasStock ? (
+            <span className="text-sm text-gray-400 font-medium">Hết hàng</span>
+          ) : hasVariants ? (
+            <span className="text-sm text-secondary font-medium">Chọn mẫu →</span>
+          ) : (
             <button
               onClick={handleAddToCart}
               className="btn-primary text-sm !px-3 !py-1.5"
             >
               Thêm vào giỏ
             </button>
-          ) : (
-            <span className="text-sm text-gray-400 font-medium">Hết hàng</span>
           )}
         </div>
       </div>

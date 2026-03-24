@@ -172,6 +172,14 @@ export interface PostListResponse {
   pages: number;
 }
 
+export interface OrderListResponse {
+  items: Order[];
+  total: number;
+  page: number;
+  limit: number;
+  pages: number;
+}
+
 export interface Comment {
   id: string;
   content: string;
@@ -200,6 +208,7 @@ export interface AdminUser {
   email: string;
   full_name: string | null;
   phone: string | null;
+  bio: string | null;
   role: "user" | "admin";
   is_active: boolean;
   avatar: string | null;

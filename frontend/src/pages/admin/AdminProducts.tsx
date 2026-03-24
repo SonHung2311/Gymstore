@@ -511,6 +511,8 @@ function ProductVariantsSection({ product }: { product: Product }) {
   );
 }
 
+const PRODUCT_PAGE_SIZES = [10, 25, 50];
+
 function ProductsPanel() {
   const qc = useQueryClient();
 
@@ -522,10 +524,12 @@ function ProductsPanel() {
   const [successMsg, setSuccessMsg] = useState("");
   const [showDescPreview, setShowDescPreview] = useState(false);
   const [reviewsProduct, setReviewsProduct] = useState<Product | null>(null);
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
 
   const { data, isLoading } = useQuery({
-    queryKey: ["admin", "products"],
-    queryFn: () => adminApi.listProducts({ limit: 100 }).then((r) => r.data as { items: Product[]; total: number; pages: number }),
+    queryKey: ["admin", "products", page, pageSize],
+    queryFn: () => adminApi.listProducts({ limit: pageSize, page }).then((r) => r.data as { items: Product[]; total: number; pages: number }),
   });
 
   const { data: categories } = useQuery({
@@ -571,75 +575,114 @@ function ProductsPanel() {
     qc.invalidateQueries({ queryKey: ["admin", "products"] });
   };
 
+  const total = data?.total ?? 0;
+  const from = total === 0 ? 0 : (page - 1) * pageSize + 1;
+  const to = Math.min(page * pageSize, total);
+
   return (
     <>
       <div className="space-y-6">
         <div className="flex items-center justify-between">
-          <p className="text-sm text-gray-500">{data?.total ?? 0} sản phẩm</p>
+          <p className="text-sm text-gray-500">{total} sản phẩm</p>
           <button onClick={openCreate} className="btn-primary">+ Thêm sản phẩm</button>
         </div>
 
         {isLoading ? (
           <div className="flex justify-center py-12"><Spinner /></div>
         ) : (
-          <div className="card overflow-hidden">
-            <table className="w-full text-sm">
-              <thead className="bg-light/50">
-                <tr>
-                  <th className="text-left px-4 py-3 font-semibold text-dark">Tên sản phẩm</th>
-                  <th className="text-left px-4 py-3 font-semibold text-dark hidden md:table-cell">Danh mục</th>
-                  <th className="text-right px-4 py-3 font-semibold text-dark">Giá</th>
-                  <th className="text-right px-4 py-3 font-semibold text-dark hidden sm:table-cell">Tồn kho</th>
-                  <th className="text-center px-4 py-3 font-semibold text-dark hidden md:table-cell">Đánh giá</th>
-                  <th className="text-center px-4 py-3 font-semibold text-dark">Trạng thái</th>
-                  <th className="text-right px-4 py-3 font-semibold text-dark">Hành động</th>
-                </tr>
-              </thead>
-              <tbody>
-                {data?.items.map((p) => (
-                  <tr key={p.id} className="border-t border-light hover:bg-surface/50 transition-colors">
-                    <td className="px-4 py-3 font-medium">{p.name}</td>
-                    <td className="px-4 py-3 text-gray-500 hidden md:table-cell">{p.category?.name || "—"}</td>
-                    <td className="px-4 py-3 text-right font-semibold text-primary">{p.price.toLocaleString("vi-VN")}₫</td>
-                    <td className="px-4 py-3 text-right hidden sm:table-cell">
-                      {(() => {
-                        const activeVariants = p.variants?.filter((v) => v.is_active) ?? [];
-                        const stock = activeVariants.length > 0
-                          ? activeVariants.reduce((s, v) => s + v.stock_quantity, 0)
-                          : p.stock_quantity;
-                        return (
-                          <span className={stock === 0 ? "text-red-500" : stock <= 5 ? "text-amber-600" : "text-dark"}>
-                            {stock}
-                            {activeVariants.length > 0 && (
-                              <span className="text-xs text-gray-400 ml-1">({activeVariants.length} ptb)</span>
-                            )}
-                          </span>
-                        );
-                      })()}
-                    </td>
-                    <td className="px-4 py-3 text-center hidden md:table-cell">
-                      {p.avg_rating != null ? (
-                        <div className="flex flex-col items-center gap-0.5">
-                          <Stars value={p.avg_rating} />
-                          <span className="text-xs text-gray-400">{p.avg_rating} · {p.review_count}</span>
-                        </div>
-                      ) : <span className="text-gray-300 text-xs">—</span>}
-                    </td>
-                    <td className="px-4 py-3 text-center">
-                      <span className={`badge ${p.is_active ? "bg-green-100 text-green-800" : "bg-gray-100 text-gray-500"}`}>
-                        {p.is_active ? "Đang bán" : "Ẩn"}
-                      </span>
-                    </td>
-                    <td className="px-4 py-3 text-right space-x-2 whitespace-nowrap">
-                      <button onClick={() => setReviewsProduct(p)} className="text-blue-400 hover:text-blue-600 text-xs font-medium">Đánh giá</button>
-                      <button onClick={() => openEdit(p)} className="text-secondary hover:text-primary text-xs font-medium">Sửa</button>
-                      <button onClick={() => handleDelete(p.id, p.name)} className="text-red-400 hover:text-red-600 text-xs font-medium">Xóa</button>
-                    </td>
+          <>
+            <div className="card overflow-hidden">
+              <table className="w-full text-sm">
+                <thead className="bg-light/50">
+                  <tr>
+                    <th className="text-left px-4 py-3 font-semibold text-dark">Tên sản phẩm</th>
+                    <th className="text-left px-4 py-3 font-semibold text-dark hidden md:table-cell">Danh mục</th>
+                    <th className="text-right px-4 py-3 font-semibold text-dark">Giá</th>
+                    <th className="text-right px-4 py-3 font-semibold text-dark hidden sm:table-cell">Tồn kho</th>
+                    <th className="text-center px-4 py-3 font-semibold text-dark hidden md:table-cell">Đánh giá</th>
+                    <th className="text-center px-4 py-3 font-semibold text-dark">Trạng thái</th>
+                    <th className="text-right px-4 py-3 font-semibold text-dark">Hành động</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+                </thead>
+                <tbody>
+                  {data?.items.map((p) => (
+                    <tr key={p.id} className="border-t border-light hover:bg-surface/50 transition-colors">
+                      <td className="px-4 py-3 font-medium">{p.name}</td>
+                      <td className="px-4 py-3 text-gray-500 hidden md:table-cell">{p.category?.name || "—"}</td>
+                      <td className="px-4 py-3 text-right font-semibold text-primary">{p.price.toLocaleString("vi-VN")}₫</td>
+                      <td className="px-4 py-3 text-right hidden sm:table-cell">
+                        {(() => {
+                          const activeVariants = p.variants?.filter((v) => v.is_active) ?? [];
+                          const stock = activeVariants.length > 0
+                            ? activeVariants.reduce((s, v) => s + v.stock_quantity, 0)
+                            : p.stock_quantity;
+                          return (
+                            <span className={stock === 0 ? "text-red-500" : stock <= 5 ? "text-amber-600" : "text-dark"}>
+                              {stock}
+                              {activeVariants.length > 0 && (
+                                <span className="text-xs text-gray-400 ml-1">({activeVariants.length} ptb)</span>
+                              )}
+                            </span>
+                          );
+                        })()}
+                      </td>
+                      <td className="px-4 py-3 text-center hidden md:table-cell">
+                        {p.avg_rating != null ? (
+                          <div className="flex flex-col items-center gap-0.5">
+                            <Stars value={p.avg_rating} />
+                            <span className="text-xs text-gray-400">{p.avg_rating} · {p.review_count}</span>
+                          </div>
+                        ) : <span className="text-gray-300 text-xs">—</span>}
+                      </td>
+                      <td className="px-4 py-3 text-center">
+                        <span className={`badge ${p.is_active ? "bg-green-100 text-green-800" : "bg-gray-100 text-gray-500"}`}>
+                          {p.is_active ? "Đang bán" : "Ẩn"}
+                        </span>
+                      </td>
+                      <td className="px-4 py-3 text-right space-x-2 whitespace-nowrap">
+                        <button onClick={() => setReviewsProduct(p)} className="text-blue-400 hover:text-blue-600 text-xs font-medium">Đánh giá</button>
+                        <button onClick={() => openEdit(p)} className="text-secondary hover:text-primary text-xs font-medium">Sửa</button>
+                        <button onClick={() => handleDelete(p.id, p.name)} className="text-red-400 hover:text-red-600 text-xs font-medium">Xóa</button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+
+            {/* Pagination footer */}
+            {total > 0 && (
+              <div className="flex items-center justify-between text-sm text-gray-500">
+                <span>Hiển thị {from}–{to} trong {total}</span>
+                <div className="flex items-center gap-3">
+                  <div className="flex items-center gap-1.5">
+                    <span className="text-xs">Hiển thị:</span>
+                    <select
+                      className="border border-light rounded-lg px-2 py-1 text-sm bg-white"
+                      value={pageSize}
+                      onChange={(e) => { setPageSize(Number(e.target.value)); setPage(1); }}
+                    >
+                      {PRODUCT_PAGE_SIZES.map((s) => <option key={s} value={s}>{s}</option>)}
+                    </select>
+                  </div>
+                  {data && data.pages > 1 && (
+                    <div className="flex items-center gap-1">
+                      <button disabled={page === 1} onClick={() => setPage(page - 1)}
+                        className="px-2 py-1 rounded border border-light bg-white hover:bg-surface disabled:opacity-40 transition-colors">‹</button>
+                      {Array.from({ length: data.pages }, (_, i) => i + 1).map((p) => (
+                        <button key={p} onClick={() => setPage(p)}
+                          className={`px-2.5 py-1 rounded text-sm font-medium transition-colors ${p === page ? "bg-primary text-white border border-primary" : "border border-light bg-white hover:bg-surface"}`}>
+                          {p}
+                        </button>
+                      ))}
+                      <button disabled={page === data.pages} onClick={() => setPage(page + 1)}
+                        className="px-2 py-1 rounded border border-light bg-white hover:bg-surface disabled:opacity-40 transition-colors">›</button>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+          </>
         )}
       </div>
 
@@ -791,9 +834,13 @@ function CategoryModal({ initial, onClose }: { initial?: Category; onClose: () =
   );
 }
 
+const LIST_PAGE_SIZES = [10, 20, 50];
+
 function CategoriesPanel() {
   const qc = useQueryClient();
   const [modal, setModal] = useState<"add" | Category | null>(null);
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
 
   const { data: categories = [], isLoading } = useQuery({
     queryKey: ["categories"],
@@ -810,10 +857,17 @@ function CategoriesPanel() {
       deleteMutation.mutate(cat.id);
   };
 
+  const allCats = categories as Category[];
+  const total = allCats.length;
+  const pages = Math.ceil(total / pageSize);
+  const from = total === 0 ? 0 : (page - 1) * pageSize + 1;
+  const to = Math.min(page * pageSize, total);
+  const paginated = allCats.slice((page - 1) * pageSize, page * pageSize);
+
   return (
-    <div>
-      <div className="flex items-center justify-between mb-4">
-        <p className="text-sm text-gray-500">{(categories as Category[]).length} danh mục</p>
+    <div className="space-y-4">
+      <div className="flex items-center justify-between">
+        <p className="text-sm text-gray-500">{total} danh mục</p>
         <button onClick={() => setModal("add")} className="btn-primary flex items-center gap-2">
           <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
@@ -823,7 +877,7 @@ function CategoriesPanel() {
       </div>
       <div className="card overflow-hidden">
         {isLoading ? <div className="py-16 text-center text-gray-400 text-sm">Đang tải...</div>
-          : (categories as Category[]).length === 0 ? (
+          : total === 0 ? (
             <div className="py-16 text-center text-gray-400 text-sm">
               Chưa có danh mục nào.{" "}
               <button onClick={() => setModal("add")} className="text-primary hover:underline">Thêm ngay</button>
@@ -838,7 +892,7 @@ function CategoriesPanel() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-light">
-                {(categories as Category[]).map((cat) => (
+                {paginated.map((cat) => (
                   <tr key={cat.id} className="hover:bg-surface/50 transition-colors">
                     <td className="px-5 py-3 font-medium text-dark">{cat.name}</td>
                     <td className="px-5 py-3 hidden sm:table-cell"><span className="font-mono text-xs text-gray-400">{cat.slug}</span></td>
@@ -855,6 +909,34 @@ function CategoriesPanel() {
             </table>
           )}
       </div>
+      {total > 0 && (
+        <div className="flex items-center justify-between text-sm text-gray-500">
+          <span>Hiển thị {from}–{to} trong {total}</span>
+          <div className="flex items-center gap-3">
+            <div className="flex items-center gap-1.5">
+              <span className="text-xs">Hiển thị:</span>
+              <select className="border border-light rounded-lg px-2 py-1 text-sm bg-white"
+                value={pageSize} onChange={(e) => { setPageSize(Number(e.target.value)); setPage(1); }}>
+                {LIST_PAGE_SIZES.map((s) => <option key={s} value={s}>{s}</option>)}
+              </select>
+            </div>
+            {pages > 1 && (
+              <div className="flex items-center gap-1">
+                <button disabled={page === 1} onClick={() => setPage(page - 1)}
+                  className="px-2 py-1 rounded border border-light bg-white hover:bg-surface disabled:opacity-40 transition-colors">‹</button>
+                {Array.from({ length: pages }, (_, i) => i + 1).map((p) => (
+                  <button key={p} onClick={() => setPage(p)}
+                    className={`px-2.5 py-1 rounded text-sm font-medium transition-colors ${p === page ? "bg-primary text-white border border-primary" : "border border-light bg-white hover:bg-surface"}`}>
+                    {p}
+                  </button>
+                ))}
+                <button disabled={page === pages} onClick={() => setPage(page + 1)}
+                  className="px-2 py-1 rounded border border-light bg-white hover:bg-surface disabled:opacity-40 transition-colors">›</button>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
       {modal === "add" && <CategoryModal onClose={() => setModal(null)} />}
       {modal && modal !== "add" && <CategoryModal initial={modal as Category} onClose={() => setModal(null)} />}
     </div>
@@ -946,7 +1028,8 @@ function AttributeModal({ initial, onClose }: { initial?: AttributeType; onClose
 function AttributesPanel() {
   const qc = useQueryClient();
   const [modal, setModal] = useState<"add" | AttributeType | null>(null);
-
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
   const { data: attrs = [], isLoading } = useQuery({
     queryKey: ["attribute-types"],
     queryFn: () => productsApi.listAttributeTypes().then((r) => r.data),
@@ -961,20 +1044,29 @@ function AttributesPanel() {
     if (window.confirm(`Xóa thuộc tính "${attr.name}"?`)) deleteMutation.mutate(attr.id);
   };
 
+  const allAttrs = attrs as AttributeType[];
+  const total = allAttrs.length;
+  const pages = Math.ceil(total / pageSize);
+  const from = total === 0 ? 0 : (page - 1) * pageSize + 1;
+  const to = Math.min(page * pageSize, total);
+  const paginated = allAttrs.slice((page - 1) * pageSize, page * pageSize);
+
   return (
-    <div>
-      <div className="flex items-center justify-between mb-4">
-        <p className="text-sm text-gray-500">{(attrs as AttributeType[]).length} thuộc tính</p>
-        <button onClick={() => setModal("add")} className="btn-primary flex items-center gap-2">
-          <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-          </svg>
-          Thêm thuộc tính
-        </button>
+    <div className="space-y-4">
+      <div className="flex items-center justify-between gap-3 flex-wrap">
+        <p className="text-sm text-gray-500">{total} thuộc tính</p>
+        <div className="flex gap-2">
+          <button onClick={() => setModal("add")} className="btn-primary flex items-center gap-2">
+            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+            </svg>
+            Thêm thuộc tính
+          </button>
+        </div>
       </div>
       <div className="card overflow-hidden">
         {isLoading ? <div className="py-16 text-center text-gray-400 text-sm">Đang tải...</div>
-          : (attrs as AttributeType[]).length === 0 ? (
+          : total === 0 ? (
             <div className="py-16 text-center text-gray-400 text-sm">
               Chưa có thuộc tính nào.{" "}
               <button onClick={() => setModal("add")} className="text-primary hover:underline">Thêm ngay</button>
@@ -989,7 +1081,7 @@ function AttributesPanel() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-light">
-                {(attrs as AttributeType[]).map((attr) => (
+                {paginated.map((attr) => (
                   <tr key={attr.id} className="hover:bg-surface/50 transition-colors">
                     <td className="px-5 py-3 font-medium text-dark">{attr.name}</td>
                     <td className="px-5 py-3">
@@ -1012,6 +1104,34 @@ function AttributesPanel() {
             </table>
           )}
       </div>
+      {total > 0 && (
+        <div className="flex items-center justify-between text-sm text-gray-500">
+          <span>Hiển thị {from}–{to} trong {total}</span>
+          <div className="flex items-center gap-3">
+            <div className="flex items-center gap-1.5">
+              <span className="text-xs">Hiển thị:</span>
+              <select className="border border-light rounded-lg px-2 py-1 text-sm bg-white"
+                value={pageSize} onChange={(e) => { setPageSize(Number(e.target.value)); setPage(1); }}>
+                {LIST_PAGE_SIZES.map((s) => <option key={s} value={s}>{s}</option>)}
+              </select>
+            </div>
+            {pages > 1 && (
+              <div className="flex items-center gap-1">
+                <button disabled={page === 1} onClick={() => setPage(page - 1)}
+                  className="px-2 py-1 rounded border border-light bg-white hover:bg-surface disabled:opacity-40 transition-colors">‹</button>
+                {Array.from({ length: pages }, (_, i) => i + 1).map((p) => (
+                  <button key={p} onClick={() => setPage(p)}
+                    className={`px-2.5 py-1 rounded text-sm font-medium transition-colors ${p === page ? "bg-primary text-white border border-primary" : "border border-light bg-white hover:bg-surface"}`}>
+                    {p}
+                  </button>
+                ))}
+                <button disabled={page === pages} onClick={() => setPage(page + 1)}
+                  className="px-2 py-1 rounded border border-light bg-white hover:bg-surface disabled:opacity-40 transition-colors">›</button>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
       {modal === "add" && <AttributeModal onClose={() => setModal(null)} />}
       {modal && modal !== "add" && <AttributeModal initial={modal as AttributeType} onClose={() => setModal(null)} />}
     </div>

@@ -1,5 +1,5 @@
-import { useInfiniteQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { useEffect, useRef, useState } from "react";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useState } from "react";
 import { Link } from "react-router-dom";
 import { communityApi, type CreatePostPayload } from "../../api/community";
 import MediaDropzone from "../../components/community/MediaDropzone";
@@ -8,7 +8,7 @@ import Spinner from "../../components/ui/Spinner";
 import { TAGS, TAG_COLORS } from "../../constants/tags";
 import { useAuthStore } from "../../store/authStore";
 
-const LIMIT = 12;
+const PAGE_SIZES = [6, 12, 24];
 
 // ── Create Post Modal ────────────────────────────────────────────────────────
 
@@ -16,6 +16,7 @@ function CreatePostModal({ onClose }: { onClose: () => void }) {
   const [form, setForm] = useState<CreatePostPayload>({ title: "", content: "", tags: [] });
   const [mediaType, setMediaType] = useState<"image" | "video" | "link" | null>(null);
   const [error, setError] = useState("");
+  const [tagInput, setTagInput] = useState("");
   const qc = useQueryClient();
 
   const mutation = useMutation({
@@ -32,6 +33,13 @@ function CreatePostModal({ onClose }: { onClose: () => void }) {
       ...f,
       tags: f.tags.includes(tag) ? f.tags.filter((t) => t !== tag) : [...f.tags, tag],
     }));
+
+  const addCustomTag = () => {
+    const tag = tagInput.trim();
+    if (!tag || form.tags.includes(tag) || form.tags.length >= 5) return;
+    setForm((f) => ({ ...f, tags: [...f.tags, tag] }));
+    setTagInput("");
+  };
 
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
@@ -70,11 +78,17 @@ function CreatePostModal({ onClose }: { onClose: () => void }) {
           </div>
 
           <div>
-            <label className="block text-sm font-medium mb-2">Thẻ chủ đề</label>
-            <div className="flex flex-wrap gap-2">
+            <label className="block text-sm font-medium mb-2">
+              Thẻ chủ đề
+              <span className="text-xs text-gray-400 font-normal ml-2">tối đa 5 thẻ</span>
+            </label>
+
+            {/* Preset tags */}
+            <div className="flex flex-wrap gap-2 mb-3">
               {TAGS.map((tag) => (
                 <button key={tag} type="button" onClick={() => toggleTag(tag)}
-                  className={`badge cursor-pointer transition-all ${
+                  disabled={!form.tags.includes(tag) && form.tags.length >= 5}
+                  className={`badge cursor-pointer transition-all disabled:opacity-40 disabled:cursor-not-allowed ${
                     form.tags.includes(tag)
                       ? `${TAG_COLORS[tag]} ring-2 ring-offset-1 ring-current`
                       : "bg-gray-100 text-gray-500 hover:bg-gray-200"
@@ -83,6 +97,39 @@ function CreatePostModal({ onClose }: { onClose: () => void }) {
                 </button>
               ))}
             </div>
+
+            {/* Custom tag input */}
+            <div className="flex gap-2">
+              <input
+                className="input flex-1 text-sm !py-1.5"
+                placeholder="Hoặc gõ thẻ tùy chỉnh rồi nhấn Enter..."
+                value={tagInput}
+                onChange={(e) => setTagInput(e.target.value)}
+                onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); addCustomTag(); } }}
+                maxLength={30}
+                disabled={form.tags.length >= 5}
+              />
+              <button
+                type="button"
+                onClick={addCustomTag}
+                disabled={!tagInput.trim() || form.tags.length >= 5}
+                className="px-3 py-1.5 rounded-lg border border-light bg-white text-sm text-primary hover:bg-surface disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+              >
+                + Thêm
+              </button>
+            </div>
+
+            {/* Selected tags (including custom) */}
+            {form.tags.length > 0 && (
+              <div className="flex flex-wrap gap-1.5 mt-2">
+                {form.tags.map((tag) => (
+                  <span key={tag} className={`badge flex items-center gap-1 ${TAG_COLORS[tag] ?? "bg-primary/10 text-primary"}`}>
+                    {tag}
+                    <button type="button" onClick={() => toggleTag(tag)} className="hover:opacity-70 leading-none">×</button>
+                  </span>
+                ))}
+              </div>
+            )}
           </div>
 
           <div className="flex gap-3 pt-2">
@@ -108,28 +155,20 @@ export default function Community() {
   const [activeTag, setActiveTag] = useState<string | undefined>(undefined);
   const [sort, setSort] = useState<"new" | "hot">("new");
   const [showCreate, setShowCreate] = useState(false);
-  const sentinelRef = useRef<HTMLDivElement>(null);
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(12);
 
-  const { data, fetchNextPage, hasNextPage, isFetchingNextPage, isLoading } = useInfiniteQuery({
-    queryKey: ["community-posts", activeTag, sort],
-    queryFn: ({ pageParam = 1 }) =>
-      communityApi.posts({ tag: activeTag, sort, page: pageParam as number, limit: LIMIT }).then((r) => r.data),
-    initialPageParam: 1,
-    getNextPageParam: (last) => last.page < last.pages ? last.page + 1 : undefined,
+  const { data, isLoading } = useQuery({
+    queryKey: ["community-posts", activeTag, sort, page, pageSize],
+    queryFn: () =>
+      communityApi.posts({ tag: activeTag, sort, page, limit: pageSize }).then((r) => r.data),
   });
 
-  // Auto-scroll: IntersectionObserver on sentinel
-  useEffect(() => {
-    const el = sentinelRef.current;
-    if (!el) return;
-    const obs = new IntersectionObserver(([entry]) => {
-      if (entry.isIntersecting && hasNextPage && !isFetchingNextPage) fetchNextPage();
-    });
-    obs.observe(el);
-    return () => obs.disconnect();
-  }, [hasNextPage, isFetchingNextPage, fetchNextPage]);
-
-  const allPosts = data?.pages.flatMap((p) => p.items) ?? [];
+  const total = data?.total ?? 0;
+  const totalPages = data?.pages ?? 1;
+  const from = total === 0 ? 0 : (page - 1) * pageSize + 1;
+  const to = Math.min(page * pageSize, total);
+  const allPosts = data?.items ?? [];
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
@@ -152,7 +191,7 @@ export default function Community() {
             <p className="text-sm font-semibold text-dark mb-2">Sắp xếp</p>
             <div className="flex lg:flex-col gap-2">
               {(["new", "hot"] as const).map((s) => (
-                <button key={s} onClick={() => setSort(s)}
+                <button key={s} onClick={() => { setSort(s); setPage(1); }}
                   className={`text-sm px-3 py-2 rounded-lg text-left transition-colors ${
                     sort === s ? "bg-primary text-white" : "bg-white border border-light text-dark hover:bg-surface"
                   }`}>
@@ -165,14 +204,14 @@ export default function Community() {
           <div>
             <p className="text-sm font-semibold text-dark mb-2">Chủ đề</p>
             <div className="flex lg:flex-col flex-wrap gap-2">
-              <button onClick={() => setActiveTag(undefined)}
+              <button onClick={() => { setActiveTag(undefined); setPage(1); }}
                 className={`text-sm px-3 py-2 rounded-lg text-left transition-colors ${
                   !activeTag ? "bg-primary text-white" : "bg-white border border-light text-dark hover:bg-surface"
                 }`}>
                 Tất cả
               </button>
               {TAGS.map((tag) => (
-                <button key={tag} onClick={() => setActiveTag(activeTag === tag ? undefined : tag)}
+                <button key={tag} onClick={() => { setActiveTag(activeTag === tag ? undefined : tag); setPage(1); }}
                   className={`text-sm px-3 py-2 rounded-lg text-left transition-colors ${
                     activeTag === tag
                       ? `${TAG_COLORS[tag]} font-medium`
@@ -200,10 +239,43 @@ export default function Community() {
                 {allPosts.map((post) => <PostGridCard key={post.id} post={post} />)}
               </div>
 
-              {/* Auto-scroll sentinel */}
-              <div ref={sentinelRef} className="h-4 mt-4" />
-              {isFetchingNextPage && (
-                <div className="flex justify-center py-6"><Spinner /></div>
+              {/* Pagination footer */}
+              {total > 0 && (
+                <div className="flex items-center justify-between mt-6 text-sm text-gray-500">
+                  <span>Hiển thị {from}–{to} trong {total} bài</span>
+                  <div className="flex items-center gap-3">
+                    <div className="flex items-center gap-1.5">
+                      <span className="text-xs">Hiển thị:</span>
+                      <select
+                        className="border border-light rounded-lg px-2 py-1 text-sm bg-white"
+                        value={pageSize}
+                        onChange={(e) => { setPageSize(Number(e.target.value)); setPage(1); }}
+                      >
+                        {PAGE_SIZES.map((s) => <option key={s} value={s}>{s}</option>)}
+                      </select>
+                    </div>
+                    {totalPages > 1 && (
+                      <div className="flex items-center gap-1">
+                        <button disabled={page === 1} onClick={() => setPage(page - 1)}
+                          className="px-3 py-1.5 rounded-lg text-sm border border-light bg-white hover:bg-surface disabled:opacity-40 transition-colors">
+                          ← Trước
+                        </button>
+                        {Array.from({ length: totalPages }, (_, i) => i + 1).map((p) => (
+                          <button key={p} onClick={() => setPage(p)}
+                            className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
+                              p === page ? "bg-primary text-white border border-primary" : "border border-light bg-white hover:bg-surface"
+                            }`}>
+                            {p}
+                          </button>
+                        ))}
+                        <button disabled={page === totalPages} onClick={() => setPage(page + 1)}
+                          className="px-3 py-1.5 rounded-lg text-sm border border-light bg-white hover:bg-surface disabled:opacity-40 transition-colors">
+                          Sau →
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                </div>
               )}
             </>
           )}

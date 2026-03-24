@@ -42,7 +42,7 @@ export default function Navbar() {
 
           {/* Desktop nav */}
           <nav className="hidden md:flex items-center gap-1">
-            {NAV_LINKS.map((item) => (
+            {NAV_LINKS.filter((item) => !(item.to === "/contact" && user?.role === "admin")).map((item) => (
               <NavLink
                 key={item.to}
                 to={item.to}
@@ -129,7 +129,7 @@ export default function Navbar() {
         {/* Mobile menu */}
         {mobileOpen && (
           <div className="md:hidden py-3 border-t border-white/20 space-y-1">
-            {NAV_LINKS.map((item) => (
+            {NAV_LINKS.filter((item) => !(item.to === "/contact" && user?.role === "admin")).map((item) => (
               <NavLink
                 key={item.to}
                 to={item.to}

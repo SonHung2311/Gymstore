@@ -497,11 +497,15 @@ export default function ProductDetail() {
           <div className="space-y-4">
             {reviews.map((r: ProductReview) => (
               <div key={r.id} className="flex gap-3 p-4 rounded-xl border border-light">
-                <ReviewAvatar avatar={r.author.avatar} name={r.author.full_name} />
+                <Link to={`/community/profile/${r.author.id}`} className="shrink-0">
+                  <ReviewAvatar avatar={r.author.avatar} name={r.author.full_name} />
+                </Link>
                 <div className="flex-1 min-w-0">
                   <div className="flex items-start justify-between gap-2 flex-wrap">
                     <div>
-                      <p className="font-semibold text-sm">{r.author.full_name ?? "Người dùng"}</p>
+                      <Link to={`/community/profile/${r.author.id}`} className="font-semibold text-sm hover:text-primary transition-colors">
+                        {r.author.full_name ?? "Người dùng"}
+                      </Link>
                       <div className="flex items-center gap-2 mt-0.5">
                         <StarDisplay value={r.rating} size={3} />
                         <span className="text-xs text-gray-400">
